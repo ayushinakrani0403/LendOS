@@ -441,9 +441,9 @@ function buildActions(loan) {
         case 'rejected':
             return `${viewAgreement}${browseBtn}`;
         case 'declined':
-            return browseBtn;
+           return `${viewAgreement}${browseBtn}`;
         case 'closed':
-            return viewAgreement;
+           return `${viewAgreement}${browseBtn}`;
         default:
             return viewAgreement;
     }

@@ -35,11 +35,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 2. Fill topbar + sidebar
     const name = session.full_name || 'Borrower';
     const userNameEl   = document.getElementById('userName');
-const userAvatarEl = document.getElementById('userAvatar');
-const welcomeEl    = document.getElementById('welcomeTitle');
-if (userNameEl)   userNameEl.textContent   = name;
-if (userAvatarEl) userAvatarEl.textContent = name.charAt(0).toUpperCase();
-if (welcomeEl)    welcomeEl.textContent    = `Welcome back, ${name}!`;
+    const userAvatarEl = document.getElementById('userAvatar');
+    const welcomeEl    = document.getElementById('welcomeTitle');
+    if (userNameEl)   userNameEl.textContent   = name;
+    if (userAvatarEl) userAvatarEl.textContent = name.charAt(0).toUpperCase();
+    if (welcomeEl)    welcomeEl.textContent    = `Welcome back, ${name}!`;
     // 3. Load full profile from backend
     await loadProfile();
 
@@ -75,9 +75,7 @@ async function loadProfile() {
         localStorage.setItem('borrower_mobile', data.mobile || '');
         session.email  = data.email  || '';
         session.mobile = data.mobile || '';
-//        session.credit_score = data.credit_score || null;
-//        if (data.credit_score) localStorage.setItem('borrower_score', data.credit_score);
-session.credit_score = data.credit_score || null;
+        session.credit_score = data.credit_score || null;
         if (data.credit_score) {
             localStorage.setItem('borrower_score', data.credit_score);
         } else {
@@ -92,8 +90,8 @@ session.credit_score = data.credit_score || null;
         setText('pDob',     data.date_of_birth|| '—');
         setText('pGender',  data.gender       || '—');
         setText('pEmployment',  data.employment_type  || '—');
-       const sidebarEmailEl = document.getElementById('sidebarEmail');
-if (sidebarEmailEl) sidebarEmailEl.textContent = data.email || '—';
+        const sidebarEmailEl = document.getElementById('sidebarEmail');
+      if (sidebarEmailEl) sidebarEmailEl.textContent = data.email || '—';
 
         // Save employment type so documents page can read it
         localStorage.setItem('borrower_employment_type', data.employment_type || '');
@@ -221,6 +219,45 @@ steps.forEach(({ key, step, max }) => {
 }
 
 
+//function buildFactors(factors) {
+//    const el = document.getElementById('factorBreakdown');
+//    if (!el) return;
+//
+//    const maxPts = {
+//        foir: 150, income_level: 120, income_consistency: 100,
+//        bounce_record: 100, avg_balance: 80, loan_to_income: 30, employment_type: 20,
+//    };
+//    const labels = {
+//        foir: 'FOIR', income_level: 'Income Level',
+//        income_consistency: 'Income Consistency', bounce_record: 'Bounce Record',
+//        avg_balance: 'Average Balance', loan_to_income: 'Loan-to-Income Ratio',
+//        employment_type: 'Employment Type',
+//    };
+//    const icons = {
+//        foir: 'ti-arrows-exchange', income_level: 'ti-coin-rupee',
+//        income_consistency: 'ti-chart-line', bounce_record: 'ti-alert-triangle',
+//        avg_balance: 'ti-wallet', loan_to_income: 'ti-scale',
+//        employment_type: 'ti-briefcase',
+//    };
+//
+//    el.innerHTML = Object.entries(factors).map(([key, pts]) => {
+//        const max   = maxPts[key] || 100;
+//        const pct   = Math.round((pts / max) * 100);
+//        const color = pct >= 70 ? '#0e8c6a' : pct >= 40 ? '#d4820a' : '#c0392b';
+//
+//return `
+//    <div class="factor-item">
+//        <i class="ti ${icons[key] || 'ti-circle'}" style="color:${color};font-size:14px;flex-shrink:0;" aria-hidden="true"></i>
+//        <span class="factor-name">${labels[key] || key}</span>
+//        <div class="factor-bar">
+//            <div class="factor-fill" style="width:${pct}%;background:${color};"></div>
+//        </div>
+//       <span></span>
+//        <span class="factor-score" style="color:${color};">${pts}/${max}</span>
+//    </div>`;
+//    }).join('');
+//}
+
 function buildFactors(factors) {
     const el = document.getElementById('factorBreakdown');
     if (!el) return;
@@ -241,16 +278,36 @@ function buildFactors(factors) {
         avg_balance: 'ti-wallet', loan_to_income: 'ti-scale',
         employment_type: 'ti-briefcase',
     };
+   // Only these three get the info icon — text branches on how THIS
+    // borrower was actually scored (source fields from step2/step6)
+    const bd = session._bd || {};
+    const isItrIncome = bd.step2_income_level?.source === 'ITR_ANNUAL_÷12';
+    const isItrLti    = bd.step6_lti?.income_source === 'ITR_ANNUAL';
+
+    const tooltips = {
+        foir: 'Average monthly EMI/loan payments ÷ average monthly income, both from your bank statement. Under 30% scores full points (150); over 60% scores zero.',
+        income_level: isItrIncome
+            ? 'Calculated from your ITR annual income ÷ 12 — not your bank credits, since business inflows like GST refunds can inflate the real picture. Above ₹1,00,000/month scores full points (120).'
+            : 'Your monthly income — salary slip net pay, or bank credits if higher. Above ₹1,00,000/month scores full points (120).',
+        loan_to_income: isItrLti
+            ? 'Requested loan amount ÷ your full annual income as declared in your ITR. Under 3× scores full points (30); over 5× scores zero.'
+            : 'Requested loan amount ÷ your annual income (monthly salary × 12). Under 3× scores full points (30); over 5× scores zero.',
+    };
 
     el.innerHTML = Object.entries(factors).map(([key, pts]) => {
         const max   = maxPts[key] || 100;
         const pct   = Math.round((pts / max) * 100);
         const color = pct >= 70 ? '#0e8c6a' : pct >= 40 ? '#d4820a' : '#c0392b';
+        const infoIcon = tooltips[key]
+            ? `<span class="factor-info" tabindex="0" data-tooltip="${tooltips[key].replace(/"/g, '&quot;')}">
+                   <i class="ti ti-info-circle" aria-hidden="true"></i>
+               </span>`
+            : '';
 
 return `
     <div class="factor-item">
         <i class="ti ${icons[key] || 'ti-circle'}" style="color:${color};font-size:14px;flex-shrink:0;" aria-hidden="true"></i>
-        <span class="factor-name">${labels[key] || key}</span>
+        <span class="factor-name">${labels[key] || key}${infoIcon}</span>
         <div class="factor-bar">
             <div class="factor-fill" style="width:${pct}%;background:${color};"></div>
         </div>
@@ -258,6 +315,59 @@ return `
         <span class="factor-score" style="color:${color};">${pts}/${max}</span>
     </div>`;
     }).join('');
+
+    wireFactorTooltips();
+}
+
+// ── Shared tooltip, appended directly to <body> so no ancestor's CSS
+//    transform can hijack its `position: fixed` containing block ──────────
+let _factorTooltipEl = null;
+function getFactorTooltipEl() {
+    if (_factorTooltipEl) return _factorTooltipEl;
+    _factorTooltipEl = document.createElement('div');
+    _factorTooltipEl.className = 'factor-tooltip';
+    document.body.appendChild(_factorTooltipEl);
+    return _factorTooltipEl;
+}
+
+function showFactorTooltip(trigger) {
+    const tip = getFactorTooltipEl();
+    tip.textContent = trigger.dataset.tooltip || '';
+    tip.classList.add('show');
+
+    const rect = trigger.getBoundingClientRect();
+    const tipWidth = 230;
+    const showBelow = rect.top < 140;
+
+    tip.classList.toggle('tooltip-down', showBelow);
+    tip.classList.toggle('tooltip-up', !showBelow);
+
+    let left = rect.left + rect.width / 2 - tipWidth / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tipWidth - 8));
+    tip.style.width = tipWidth + 'px';
+    tip.style.left = left + 'px';
+    tip.style.setProperty('--arrow-left', (rect.left + rect.width / 2 - left) + 'px');
+
+    if (showBelow) {
+        tip.style.top = (rect.bottom + 8) + 'px';
+        tip.style.transform = 'none';
+    } else {
+        tip.style.top = (rect.top - 8) + 'px';
+        tip.style.transform = 'translateY(-100%)';
+    }
+}
+
+function hideFactorTooltip() {
+    if (_factorTooltipEl) _factorTooltipEl.classList.remove('show');
+}
+
+function wireFactorTooltips() {
+    document.querySelectorAll('.factor-info').forEach(trigger => {
+        trigger.addEventListener('mouseenter', () => showFactorTooltip(trigger));
+        trigger.addEventListener('mouseleave', hideFactorTooltip);
+        trigger.addEventListener('focus', () => showFactorTooltip(trigger));
+        trigger.addEventListener('blur', hideFactorTooltip);
+    });
 }
 
 // ── Update journey steps ──────────────────────────────────────────────────────
@@ -489,31 +599,31 @@ if (type === 'bank') {
             document.getElementById('bank_statement_password').value = '';
             document.getElementById('e_bank_password').classList.remove('show');
         }
-} else if (type === 'salary') {
-    salaryFile = file;
-    document.getElementById('salary-idle').style.display   = 'none';
-    document.getElementById('salary-done').style.display   = 'flex';
-    document.getElementById('salary-filename').textContent = file.name;
-    document.getElementById('salary-upload-box').classList.add('has-file');
-    document.getElementById('e_salary').classList.remove('show');
-} else if (type === 'itr') {
-    itrFile = file;
-    document.getElementById('itr-idle').style.display   = 'none';
-    document.getElementById('itr-done').style.display   = 'flex';
-    document.getElementById('itr-filename').textContent = file.name;
-    document.getElementById('itr-upload-box').classList.add('has-file');
-    document.getElementById('e_itr').classList.remove('show');
-  const itrPwGroup = document.getElementById('itr-password-group');
-        if (file.type === 'application/pdf') {
-            itrPwGroup.style.display = 'block';
-        } else {
-            itrPwGroup.style.display = 'none';
-            document.getElementById('itr_password').value = '';
-            document.getElementById('e_itr_password').classList.remove('show');
-        }
-}
+    } else if (type === 'salary') {
+        salaryFile = file;
+        document.getElementById('salary-idle').style.display   = 'none';
+        document.getElementById('salary-done').style.display   = 'flex';
+        document.getElementById('salary-filename').textContent = file.name;
+        document.getElementById('salary-upload-box').classList.add('has-file');
+        document.getElementById('e_salary').classList.remove('show');
+    } else if (type === 'itr') {
+        itrFile = file;
+        document.getElementById('itr-idle').style.display   = 'none';
+        document.getElementById('itr-done').style.display   = 'flex';
+        document.getElementById('itr-filename').textContent = file.name;
+        document.getElementById('itr-upload-box').classList.add('has-file');
+        document.getElementById('e_itr').classList.remove('show');
+        const itrPwGroup = document.getElementById('itr-password-group');
+            if (file.type === 'application/pdf') {
+                itrPwGroup.style.display = 'block';
+            } else {
+                itrPwGroup.style.display = 'none';
+                document.getElementById('itr_password').value = '';
+                document.getElementById('e_itr_password').classList.remove('show');
+            }
+    }
 
-}
+    }
 
 async function uploadDocuments() {
     let ok = true;
@@ -578,15 +688,12 @@ async function uploadDocuments() {
         });
         const data = await res.json();
 
-//        if (!res.ok) {
-//            showDocsAlert('error', data.detail || 'Upload failed. Please try again.');
-//            return;
-//        }
 
-if (!res.ok) {
-            const detail = data.detail;
-//            if (detail && typeof detail === 'object' && detail.type === 'bank_statement_quality') {
-if (detail && typeof detail === 'object' &&
+
+        if (!res.ok) {
+                    const detail = data.detail;
+        //            if (detail && typeof detail === 'object' && detail.type === 'bank_statement_quality') {
+        if (detail && typeof detail === 'object' &&
                 (detail.type === 'bank_statement_quality' || detail.type === 'itr_quality')) {
                 showDocsAlert('error', detail.message);
             } else if (typeof detail === 'string') {
@@ -682,25 +789,7 @@ if (detail && typeof detail === 'object' &&
     }
 }
 
-// ── Check on page load if already scored ─────────────────────────────────────
-//async function showVerifiedIfDone() {
-//    // Only run on documents page
-//    if (!document.getElementById('verified-docs-view')) return;
-//
-//    try {
-//        const res  = await apiFetch(`/api/borrower/profile/${session.borrower_id}`);
-//        if (!res.ok) return;
-//        const data = await res.json();
-//
-//        if (data.kyc_status === 'submitted' && (data.bank_data || data.income_data)) {
-//            const bank   = typeof data.bank_data   === 'string' ? JSON.parse(data.bank_data)   : data.bank_data;
-//            const income = typeof data.income_data === 'string' ? JSON.parse(data.income_data) : data.income_data;
-//            showVerifiedDocs(bank, income, false);
-//        }
-//    } catch (err) {
-//        console.error('showVerifiedIfDone error:', err);
-//    }
-//}
+
 
 async function showVerifiedIfDone() {
     // Only run on documents page

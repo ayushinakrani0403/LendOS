@@ -127,7 +127,7 @@ function renderTable() {
                 <div class="b-cell">
                     <div class="b-av">${initials(b.full_name)}</div>
                     <div>
-                        <div class="b-name">${b.full_name}</div>
+                        <div class="b-name">${(b.full_name || '—').toUpperCase()}</div>
                         <div class="b-email">${b.email}</div>
                     </div>
                 </div>
@@ -200,7 +200,7 @@ function renderModal(d) {
     const b = d.borrower || d;
     const loans = d.loans || [];
 
-    document.getElementById('modalTitle').textContent = b.full_name || 'Borrower Profile';
+   document.getElementById('modalTitle').textContent = (b.full_name || 'Borrower Profile').toUpperCase();
 
     document.getElementById('modalBody').innerHTML = `
         <!-- Profile top -->
@@ -208,7 +208,7 @@ function renderModal(d) {
             <div class="modal-profile-top">
                 <div class="modal-av">${initials(b.full_name)}</div>
                 <div>
-                    <div class="modal-av-name">${b.full_name}</div>
+                   <div class="modal-av-name">${(b.full_name || '—').toUpperCase()}</div>
                     <div class="modal-av-email">${b.email}</div>
                     <div class="modal-av-score">${scoreChip(b.credit_score)}</div>
                 </div>
@@ -318,3 +318,4 @@ function handleLogout() {
     ['admin_token','admin_name'].forEach(k => localStorage.removeItem(k));
     window.location.href = '/admin/login';
 }
+

@@ -194,9 +194,18 @@ async def get_recent_applications(nbfc_id: int):
 
 
 # ─── 4. SETTINGS ──────────────────────────────────────────────────────────────
+import re
 
 @router.put("/settings/{nbfc_id}")
-async def update_loan_rules(nbfc_id: int, data: LoanRulesUpdate):
+async def update_loan_rules(
+    nbfc_id: int,
+    data: LoanRulesUpdate,
+    token: str = Depends(oauth2_scheme),
+):
+    token_nbfc_id = get_nbfc_id_from_token(token)
+    if token_nbfc_id != nbfc_id:
+        raise HTTPException(403, "Access denied.")
+
     nbfc = await database.fetch_one(
         "SELECT id FROM nbfcs WHERE id = :id", {"id": nbfc_id}
     )
@@ -211,6 +220,25 @@ async def update_loan_rules(nbfc_id: int, data: LoanRulesUpdate):
         raise HTTPException(400, "Interest rate must be greater than 0.")
     if not (300 <= data.min_credit_score <= 900):
         raise HTTPException(400, "Min credit score must be between 300 and 900.")
+
+    if not data.upi_id or not re.match(r"^[\w.\-]{2,256}@[a-zA-Z]{2,64}$", data.upi_id):
+        raise HTTPException(400, "Enter a valid UPI ID.")
+    if not data.bank_account_no or not re.match(r"^[0-9]{9,18}$", data.bank_account_no):
+        raise HTTPException(400, "Account number must be 9-18 digits.")
+    if not data.bank_ifsc or not re.match(r"^[A-Za-z]{4}0[A-Za-z0-9]{6}$", data.bank_ifsc):
+        raise HTTPException(400, "Enter a valid 11-character IFSC code.")
+    data.bank_ifsc = data.bank_ifsc.upper()
+
+    dupe = await database.fetch_one(
+        """SELECT id, upi_id, bank_account_no FROM nbfcs
+           WHERE id != :nbfc_id
+             AND (upi_id = :upi_id OR bank_account_no = :bank_account_no)""",
+        {"nbfc_id": nbfc_id, "upi_id": data.upi_id, "bank_account_no": data.bank_account_no}
+    )
+    if dupe:
+        if dupe["upi_id"] == data.upi_id:
+            raise HTTPException(400, "This UPI ID is already registered to another NBFC.")
+        raise HTTPException(400, "This account number is already registered to another NBFC.")
 
     await database.execute(
         """UPDATE nbfcs SET
@@ -483,6 +511,21 @@ async def disburse_loan(loan_id: int, data: DisburseRequest, nbfc_id: int = Quer
         raise HTTPException(400, f"Loan must be active to disburse. Current status: '{loan['status']}'.")
     if not data.utr_number.strip():
         raise HTTPException(400, "UTR number is required.")
+
+    utr_clean = data.utr_number.strip().upper()
+
+    # ── 1b. Reject duplicate UTR numbers ──────────────────────────
+    duplicate = await database.fetch_one(
+        """SELECT id FROM loan_applications
+           WHERE utr_number = :utr AND id != :loan_id""",
+        {"utr": utr_clean, "loan_id": loan_id}
+    )
+    if duplicate:
+        raise HTTPException(
+            400,
+            f"This UTR number has already been used for loan #{duplicate['id']}. "
+            "Please enter a unique UTR number."
+        )
 
     # ── 2. Update loan status ─────────────────────────────────────
     await database.execute(

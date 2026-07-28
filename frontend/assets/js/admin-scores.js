@@ -116,7 +116,7 @@ function renderTable() {
                     <div class="loan-cell">
                         <div class="loan-av">${initials}</div>
                         <div>
-                            <div class="loan-name">${s.borrower_name || '—'}</div>
+                            <div class="loan-name">${(s.borrower_name || '—').toUpperCase()}</div>
                             <div class="loan-sub">${s.borrower_mobile || '—'}</div>
                         </div>
                     </div>
@@ -180,7 +180,7 @@ function renderModal(s) {
     const cls = GRADE_CLASS[gradeLabel] || '';
 
     document.getElementById('modalAvatar').textContent = (s.borrower_name || 'B').charAt(0).toUpperCase();
-    document.getElementById('modalTitle').textContent = s.borrower_name || '—';
+document.getElementById('modalTitle').textContent = (s.borrower_name || '—').toUpperCase();
     document.getElementById('modalSub').textContent = `${s.nbfc_name || '—'} · Score record #${s.id}`;
 
     document.getElementById('modalBody').innerHTML = `
@@ -198,7 +198,7 @@ function renderModal(s) {
         <div class="modal-section">
             <div class="modal-section-title"><i class="ti ti-user"></i> Borrower</div>
             <div class="detail-grid">
-                <div class="detail-cell"><div class="detail-label">Name</div><div class="detail-val">${s.borrower_name || '—'}</div></div>
+               <div class="detail-cell"><div class="detail-label">Name</div><div class="detail-val">${(s.borrower_name || '—').toUpperCase()}</div></div>
                 <div class="detail-cell"><div class="detail-label">Mobile</div><div class="detail-val">${s.borrower_mobile || '—'}</div></div>
                 <div class="detail-cell"><div class="detail-label">Email</div><div class="detail-val">${s.borrower_email || '—'}</div></div>
                 <div class="detail-cell"><div class="detail-label">Scored On</div><div class="detail-val">${fmtDate(s.created_at)}</div></div>

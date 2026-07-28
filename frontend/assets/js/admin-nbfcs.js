@@ -219,7 +219,12 @@ async function openModal(nbfcId) {
 
 function renderModal(data) {
     const n = data.nbfc;
-    document.getElementById('modalAvatar').textContent = (n.company_name || 'N').charAt(0).toUpperCase();
+    const modalAvatar = document.getElementById('modalAvatar');
+    if (n.logo_url) {
+        modalAvatar.innerHTML = `<img src="${n.logo_url}" alt="${n.company_name || ''}" style="width:100%;height:100%;object-fit:contain;padding:5px;border-radius:10px;"/>`;
+    } else {
+        modalAvatar.textContent = (n.company_name || 'N').charAt(0).toUpperCase();
+    }
     document.getElementById('modalTitle').textContent = n.company_name || '—';
     document.getElementById('modalSub').textContent = n.email || '—';
 

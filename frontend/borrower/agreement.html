@@ -74,7 +74,7 @@
               <i class="ti ti-arrow-left"></i>
             </a>
             <div>
-              <h1 class="page-title">Loan Agreement</h1>
+              <h1 class="page-title"><i class="ti ti-file-invoice"></i>Loan Agreement</h1>
               <p class="page-sub" id="pageSubtitle">Loading agreement…</p>
             </div>
           </div>
@@ -233,17 +233,22 @@
                   in this agreement. This constitutes a legally valid digital signature under the
                   <strong>IT Act, 2000</strong>.
                 </p>
-                <div class="otp-row">
-                  <input type="text" id="otpInput" class="otp-input" placeholder="Enter 6-digit OTP"
-                         maxlength="6" inputmode="numeric"/>
-                  <button class="otp-send-btn" id="sendOtpBtn" onclick="sendOtp()">
-                    <i class="ti ti-device-mobile-message"></i> Send OTP
-                  </button>
-                </div>
-              <button class="sign-btn" id="signBtn" disabled onclick="signAgreement()">
-                  <i class="ti ti-writing-sign"></i> Sign & Accept Agreement
-                </button>
-              </div>
+              <div class="otp-row">
+    <input type="text" id="otpInput" class="otp-input" placeholder="Enter 6-digit OTP"
+           maxlength="6" inputmode="numeric"/>
+    <button class="otp-send-btn" id="sendOtpBtn" onclick="sendOtp()">
+      <i class="ti ti-device-mobile-message"></i> Send OTP
+    </button>
+  </div>
+  <div class="sign-actions-row" style="display:flex; gap:10px; margin-top:12px;">
+    <button class="btn-reject" onclick="rejectApprovedAgreement()">
+      <i class="ti ti-x"></i> Reject & Choose Another Lender
+    </button>
+    <button class="sign-btn" id="signBtn" disabled onclick="signAgreement()" style="flex:1;">
+      <i class="ti ti-writing-sign"></i> Sign & Accept Agreement
+    </button>
+  </div>
+</div>
 
               <!-- Rejected section -->
               <div class="rejected-section" id="rejectedSection" style="display:none;">

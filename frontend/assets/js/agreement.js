@@ -250,6 +250,24 @@ function setupOtpValidation() {
     });
 }
 
+async function rejectApprovedAgreement() {
+    if (!confirm('Are you sure you want to reject this agreement? You will need to choose a different lender and reapply.')) {
+        return;
+    }
+    const token = localStorage.getItem('borrower_token');
+    const applicationId = new URLSearchParams(window.location.search).get('id');
+    try {
+        const res = await fetch(`${API}/api/borrower/loan-application/${applicationId}/decline`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to decline.');
+        window.location.href = '/borrower/nbfcs';
+    } catch (e) {
+        alert('Something went wrong. Please try again.');
+    }
+}
+
 let otpCooldownTimer = null;
 
 // ── Send OTP ──────────────────────────────────────────────────

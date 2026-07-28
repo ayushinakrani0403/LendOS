@@ -65,7 +65,7 @@
 
         <div class="page-header">
           <div>
-            <h1 class="page-title">Settings</h1>
+            <h1 class="page-title"><i class="ti ti-settings"></i>Settings</h1>
             <p class="page-sub">Manage your profile and account security.</p>
           </div>
         </div>
@@ -108,16 +108,51 @@
                 </div>
               </div>
             </div>
-            <div class="fg-2">
-              <div class="form-group">
-                <label class="form-label">Current Password<span class="req">*</span></label>
-                <input type="password" id="s-current-pw" class="form-control" autocomplete="off" name="current-password-no-autofill"/>
-              </div>
-              <div class="form-group">
-                <label class="form-label">New Password<span class="req">*</span></label>
-                <input type="password" id="s-new-pw" class="form-control" autocomplete="new-password"/>
-              </div>
-            </div>
+<!--            <div class="fg-2">-->
+<!--              <div class="form-group">-->
+<!--                <label class="form-label">Current Password<span class="req">*</span></label>-->
+<!--                <input type="password" id="s-current-pw" class="form-control" autocomplete="off" name="current-password-no-autofill"/>-->
+<!--              </div>-->
+<!--              <div class="form-group">-->
+<!--                <label class="form-label">New Password<span class="req">*</span></label>-->
+<!--                <input type="password" id="s-new-pw" class="form-control" autocomplete="new-password"/>-->
+<!--              </div>-->
+<!--                <div class="form-group">-->
+<!--            <label class="form-label">Confirm New Password<span class="req">*</span></label>-->
+<!--            <input type="password" id="s-confirm-pw" class="form-control" autocomplete="new-password"/>-->
+<!--          </div>-->
+<!--            </div>-->
+
+              <div class="fg-2">
+  <div class="form-group">
+    <label class="form-label">Current Password<span class="req">*</span></label>
+    <div class="pw-input-wrap">
+      <input type="password" id="s-current-pw" class="form-control" autocomplete="off" name="current-password-no-autofill"/>
+      <button type="button" class="pw-toggle" onclick="togglePwVisibility('s-current-pw', this)">
+        <i class="ti ti-eye"></i>
+      </button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">New Password<span class="req">*</span></label>
+    <div class="pw-input-wrap">
+      <input type="password" id="s-new-pw" class="form-control" autocomplete="new-password"/>
+      <button type="button" class="pw-toggle" onclick="togglePwVisibility('s-new-pw', this)">
+        <i class="ti ti-eye"></i>
+      </button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Confirm New Password<span class="req">*</span></label>
+    <div class="pw-input-wrap">
+      <input type="password" id="s-confirm-pw" class="form-control" autocomplete="new-password"/>
+      <button type="button" class="pw-toggle" onclick="togglePwVisibility('s-confirm-pw', this)">
+        <i class="ti ti-eye"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
             <button type="button" class="btn-save" onclick="changePassword()" style="align-self:flex-start;margin-top:14px;">
               <i class="ti ti-key"></i> Update Password
             </button>

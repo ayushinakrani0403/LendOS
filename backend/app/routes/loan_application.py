@@ -374,14 +374,18 @@ async def decline_loan_agreement(
     if tok.get("borrower_id") != loan["borrower_id"]:
         raise HTTPException(403, "Access denied.")
 
-    if loan["status"] not in ("pending", "rejected"):
+    if loan["status"] not in ("pending", "approved", "rejected"):
         raise HTTPException(400, f"Cannot decline in status '{loan['status']}'.")
 
-        # Mark as declined if borrower is declining a pending agreement
-    if loan["status"] == "pending":
+        # Mark as declined if borrower is walking away from a pending or approved agreement
+    if loan["status"] in ("pending", "approved"):
         await database.execute(
             "UPDATE loan_applications SET status = 'declined' WHERE id = :id",
             {"id": application_id}
+        )
+        await database.execute(
+            "DELETE FROM loan_otps WHERE loan_id = :loan_id AND (is_used = false OR is_used IS NULL)",
+            {"loan_id": application_id}
         )
 
         # Keep record for NBFC audit — only reset borrower status so they can reapply
@@ -391,6 +395,62 @@ async def decline_loan_agreement(
     )
     return {"message": "Application declined."}
 
+@router.get("/affordability/{nbfc_id}")
+async def get_borrower_affordability(
+    nbfc_id: int,
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        tok = decode_token(token)
+    except Exception:
+        raise HTTPException(401, "Invalid or expired token.")
+
+    borrower_id = tok.get("borrower_id")
+
+    # 1. Get borrower's income and existing EMIs from saved score factors
+    borrower = await database.fetch_one(
+        "SELECT score_factors FROM borrowers WHERE id = :id",
+        {"id": borrower_id}
+    )
+    if not borrower or not borrower["score_factors"]:
+        raise HTTPException(400, "Borrower financial data not found.")
+
+    import json
+    factors = json.loads(borrower["score_factors"])
+    monthly_income = factors.get("step1_foir", {}).get("avg_monthly_income", 0)
+    existing_emis = factors.get("step1_foir", {}).get("avg_monthly_obligations", 0)
+
+    # 2. Get NBFC limits and rates
+    nbfc = await database.fetch_one(
+        "SELECT max_foir_percent, max_loan_amount, max_tenure_months, interest_rate FROM nbfcs WHERE id = :id",
+        {"id": nbfc_id}
+    )
+    if not nbfc:
+        raise HTTPException(404, "NBFC not found.")
+
+    foir_limit = float(nbfc["max_foir_percent"] or 50)
+    max_nbfc_loan = float(nbfc["max_loan_amount"])
+
+    # 3. Calculate max safe loan using Present Value of Annuity formula
+    safe_emi = (monthly_income * foir_limit / 100) - existing_emis
+    max_safe_loan = max_nbfc_loan
+
+    if safe_emi > 0:
+        r = float(nbfc["interest_rate"]) / 1200
+        n = int(nbfc["max_tenure_months"])
+        calculated_safe_loan = safe_emi * ((1 + r) ** n - 1) / (r * (1 + r) ** n)
+        # Cap it strictly at whichever is lower: NBFC's absolute max or User's safe max
+        max_safe_loan = min(max_nbfc_loan, calculated_safe_loan)
+    else:
+        max_safe_loan = 0
+
+    return {
+        "monthly_income": monthly_income,
+        "existing_emis": existing_emis,
+        "safe_emi_limit": safe_emi if safe_emi > 0 else 0,
+        "max_safe_loan": round(max_safe_loan),
+        "nbfc_max_loan": max_nbfc_loan
+    }
 
 # ─── Send OTP ─────────────────────────────────────────────────────────────────
 @router.post("/loan-application/{app_id}/send-otp")

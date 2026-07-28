@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Settings — LendOS NBFC Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="/static/assets/css/nbfc-base.css">
   <link rel="stylesheet" href="/static/assets/css/nbfc-settings.css">
@@ -90,13 +90,8 @@
         <!-- Page header -->
         <div class="page-header">
           <div>
-            <h1 class="page-title">Loan Rules & Settings</h1>
+            <h1 class="page-title"><i class="ti ti-settings"></i>Loan Rules & Settings</h1>
             <p class="page-sub">Configure your lending rules. These determine which borrowers can apply and what terms they receive.</p>
-          </div>
-          <div class="page-header-actions">
-            <a class="btn-outline" href="/nbfc/dashboard">
-              <i class="ti ti-arrow-left"></i> Back to Overview
-            </a>
           </div>
         </div>
 
@@ -121,7 +116,7 @@
           <div class="settings-grid">
 
             <!-- ── Card 1: Loan Limits ── -->
-            <div class="settings-card">
+            <div class="settings-card tile">
               <div class="settings-card-header">
                 <div class="settings-card-title">
                   <div class="settings-card-icon teal">
@@ -167,10 +162,19 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Live loan range summary -->
+              <div class="loan-range-preview" id="loanRangePreview">
+                <div class="loan-range-preview-label">Loan Range Summary</div>
+                <div class="loan-range-preview-row">
+                  <span>Amount: <span id="previewLoanRange">—</span></span>
+                  <span class="loan-range-preview-val" id="previewTenureRange">—</span>
+                </div>
+              </div>
             </div>
 
             <!-- ── Card 2: Interest & Fees ── -->
-            <div class="settings-card">
+            <div class="settings-card tile">
               <div class="settings-card-header">
                 <div class="settings-card-title">
                   <div class="settings-card-icon blue">
@@ -214,7 +218,7 @@
             </div>
 
             <!-- ── Card 3: Eligibility ── -->
-            <div class="settings-card">
+            <div class="settings-card tile">
               <div class="settings-card-header">
                 <div class="settings-card-title">
                   <div class="settings-card-icon green">
@@ -259,7 +263,7 @@
             </div>
 
             <!-- ── Card 4: Late Payment Rules ── -->
-            <div class="settings-card">
+            <div class="settings-card tile">
               <div class="settings-card-header">
                 <div class="settings-card-title">
                   <div class="settings-card-icon orange">
@@ -291,10 +295,19 @@
                   <div class="form-hint">Charged per missed EMI after grace period</div>
                 </div>
               </div>
+
+              <!-- Live late-fee preview -->
+              <div class="penalty-preview" id="penaltyPreview">
+                <div class="penalty-preview-label">Sample Late Fee Preview</div>
+                <div class="penalty-preview-row">
+                  <span>EMI missed by <span id="previewGracePlus">—</span> days · beyond <span id="previewGrace">—</span>-day grace</span>
+                  <span class="penalty-preview-val" id="previewPenalty">—</span>
+                </div>
+              </div>
             </div>
 
-              <!-- ── Card 5: Payment Details ── -->
-<div class="settings-card">
+              <!-- ── Card 5: Payment Details (full-width closing card) ── -->
+<div class="settings-card span-2">
   <div class="settings-card-header">
     <div class="settings-card-title">
       <div class="settings-card-icon purple">
@@ -306,43 +319,52 @@
       </div>
     </div>
   </div>
-  <div class="fg-2">
+  <div class="fg-3">
     <div class="form-group">
-      <label class="form-label">UPI ID</label>
-      <div class="input-wrap">
-        <input class="form-control" type="text"
-               id="s-upi" placeholder="yourcompany@hdfcbank"/>
-      </div>
-      <div class="form-hint">Shown to borrowers for EMI payment</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Bank Name</label>
-      <div class="input-wrap">
-        <input class="form-control" type="text"
-               id="s-bank-name" placeholder="HDFC Bank"/>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Account Number</label>
-      <div class="input-wrap">
-        <input class="form-control" type="text"
-               id="s-bank-acc" placeholder="0123456789"/>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">IFSC Code</label>
-      <div class="input-wrap">
-        <input class="form-control" type="text"
-               id="s-bank-ifsc" placeholder="HDFC0001234" style="text-transform:uppercase;"/>
-      </div>
-    </div>
+  <label class="form-label">UPI ID <span class="req">*</span></label>
+  <div class="input-wrap">
+    <input class="form-control" type="text" id="s-upi"
+           placeholder="yourcompany@hdfcbank" required
+           pattern="^[\w.\-]{2,256}@[a-zA-Z]{2,64}$"
+           title="Enter a valid UPI ID, e.g. yourcompany@hdfcbank"/>
+  </div>
+  <div class="form-hint">Shown to borrowers for EMI payment</div>
+  <div class="field-err" id="err-upi"></div>
+</div>
+<div class="form-group">
+  <label class="form-label">Bank Name <span class="req">*</span></label>
+  <div class="input-wrap">
+    <input class="form-control" type="text" id="s-bank-name"
+           placeholder="HDFC Bank" required/>
+  </div>
+</div>
+<div class="form-group">
+  <label class="form-label">Account Number <span class="req">*</span></label>
+  <div class="input-wrap">
+    <input class="form-control" type="text" id="s-bank-acc"
+           placeholder="0123456789" required
+           pattern="^[0-9]{9,18}$" inputmode="numeric"
+           title="Account number must be 9-18 digits"/>
+  </div>
+  <div class="field-err" id="err-acc"></div>
+</div>
+<div class="form-group">
+  <label class="form-label">IFSC Code <span class="req">*</span></label>
+  <div class="input-wrap">
+    <input class="form-control" type="text" id="s-bank-ifsc"
+           placeholder="HDFC0001234" style="text-transform:uppercase;" required
+           pattern="^[A-Za-z]{4}0[A-Za-z0-9]{6}$" maxlength="11"
+           title="Enter a valid 11-character IFSC code, e.g. HDFC0001234"/>
+  </div>
+  <div class="form-hint">Format: 4 letters + 0 + 6 alphanumeric characters</div>
+  <div class="field-err" id="err-ifsc"></div>
+</div>
   </div>
 </div>
 
 </div><!-- /settings-grid -->
 
-
-<div class="settings-card">
+<div class="settings-card standalone">
   <div class="settings-card-header">
     <div class="settings-card-title">
       <div class="settings-card-icon orange"><i class="ti ti-lock"></i></div>
@@ -352,24 +374,51 @@
       </div>
     </div>
   </div>
-  <div class="fg-2">
+
+  <!-- Changed from fg-2 to a 3-column grid -->
+  <div class="fg-3" style="margin-bottom: 1.5rem;">
+
     <div class="form-group">
-      <label class="form-label">Current Password<span class="req">*</span></label>
-      <input type="password" id="s-current-pw" class="form-control" autocomplete="off" name="current-password-no-autofill"/>
+      <label class="form-label">Current Password <span class="req">*</span></label>
+      <div class="input-wrap pw-input-wrap">
+        <input type="password" id="s-current-pw" class="form-control" autocomplete="off" name="current-password-no-autofill"/>
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('s-current-pw', 'eye-current')">
+            <i class="ti ti-eye" id="eye-current"></i>
+        </button>
+      </div>
     </div>
+
     <div class="form-group">
-      <label class="form-label">New Password<span class="req">*</span></label>
-      <input type="password" id="s-new-pw" class="form-control"  autocomplete="new-password"/>
+      <label class="form-label">New Password <span class="req">*</span></label>
+      <div class="input-wrap pw-input-wrap">
+        <input type="password" id="s-new-pw" class="form-control" autocomplete="new-password"/>
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('s-new-pw', 'eye-new')">
+            <i class="ti ti-eye" id="eye-new"></i>
+        </button>
+      </div>
     </div>
+
+    <div class="form-group">
+      <label class="form-label">Confirm New Password <span class="req">*</span></label>
+      <div class="input-wrap pw-input-wrap">
+        <input type="password" id="s-confirm-pw" class="form-control" autocomplete="new-password"/>
+        <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('s-confirm-pw', 'eye-confirm')">
+            <i class="ti ti-eye" id="eye-confirm"></i>
+        </button>
+      </div>
+    </div>
+
   </div>
+
   <button type="button" class="btn-save" onclick="changePassword()" style="align-self:flex-start;">
     <i class="ti ti-key"></i> Update Password
   </button>
-  <div id="pw-alert-ok" class="alert success" style="display:none;"><i class="ti ti-check"></i> Password updated.</div>
-  <div id="pw-alert-err" class="alert error" style="display:none;"><i class="ti ti-alert-circle"></i> <span id="pw-alert-err-text"></span></div>
+
+  <div id="pw-alert-ok" class="alert success" style="display:none; margin-top:1rem;"><i class="ti ti-check"></i> Password updated.</div>
+  <div id="pw-alert-err" class="alert error" style="display:none; margin-top:1rem;"><i class="ti ti-alert-circle"></i> <span id="pw-alert-err-text"></span></div>
 </div>
 
-<div class="settings-card danger">
+<div class="settings-card danger standalone">
   <div class="settings-card-header">
     <div class="settings-card-title">
       <div class="settings-card-icon red"><i class="ti ti-trash"></i></div>

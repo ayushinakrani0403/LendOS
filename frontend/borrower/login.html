@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Apply for a Loan — LendOS</title>
@@ -9,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="/static/assets/css/borrower-login.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="page">
@@ -48,7 +50,7 @@
       </div>
 
       <div class="left-illustration">
-        <svg width="260" height="230" viewBox="0 0 260 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="400" height="354" viewBox="40 18 180 212" fill="none" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="130" cy="212" rx="90" ry="12" fill="rgba(42,128,153,0.08)"/>
           <rect x="80" y="30" width="100" height="175" rx="16" fill="#daeef5"/>
           <rect x="84" y="34" width="92" height="167" rx="13" fill="white"/>
@@ -338,9 +340,18 @@
               <div class="err-msg" id="e_login_password">Enter your password</div>
             </div>
 
+
+
             <div style="display:flex;justify-content:flex-end;margin:-8px 0 18px;">
               <a href="#" onclick="showForgotPassword();return false;" style="font-size:12.5px;color:var(--teal-600);text-decoration:none;font-weight:500;">Forgot password?</a>
             </div>
+
+            <div id="g_id_onload"
+     data-client_id="523197755257-a8osp6a7i5bpv6v06168fk4eo15k333e.apps.googleusercontent.com"
+     data-callback="handleGoogleLogin"
+     data-auto_prompt="false">
+</div>
+<div class="g_id_signin" data-type="standard" data-theme="outline" data-size="large"></div><br>
 
             <button class="btn-primary" id="btn-login" onclick="submitLogin()">
               Sign in <i class="ti ti-arrow-right" style="font-size:15px;"></i>
@@ -455,6 +466,54 @@
     }
   };
 
+  window.handleGoogleLogin = async function(response) {
+    const googleToken = response.credential;
+    const alertBox = document.getElementById('alert-login');
+
+    alertBox.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/borrower/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: googleToken })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+
+            // --- THE FIX: MATCHING YOUR LOCAL STORAGE EXACTLY ---
+
+            // 1. The essential auth tokens
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('borrower_token', data.access_token); // <-- The missing link!
+
+            // 2. The essential user details
+            localStorage.setItem('borrower_id', data.borrower_id);
+            localStorage.setItem('borrower_name', data.full_name);
+            localStorage.setItem('full_name', data.full_name);
+            localStorage.setItem('email', data.email);
+            localStorage.setItem('borrower_email', data.email);
+            localStorage.setItem('borrower_kyc_status', data.kyc_status);
+
+            // 3. The raw data package
+            localStorage.setItem('borrower_data', JSON.stringify(data));
+
+            // ----------------------------------------------------
+
+            // Redirect to dashboard
+            window.location.href = '/borrower/overview';
+        } else {
+            const error = await res.json();
+            alertBox.innerHTML = `<i class="ti ti-alert-circle"></i> ${error.detail || 'Google login failed.'}`;
+            alertBox.style.display = 'block';
+        }
+    } catch (err) {
+        console.error("Network or server error during Google login:", err);
+        alertBox.innerHTML = `<i class="ti ti-alert-circle"></i> Connection failed. Make sure the server is running.`;
+        alertBox.style.display = 'block';
+    }
+}
   async function requestResetOtp() {
     const email = document.getElementById('forgot_email_input').value.trim();
     const alertErr = document.getElementById('alert-forgot');

@@ -119,14 +119,43 @@ if (!session) { window.location.href = '/nbfc/register'; return; }
 document.body.style.visibility = 'hidden';
 
 // ADD THIS after body hide line
+//try {
+//    const verify = await fetch(`${API}/api/nbfc/dashboard/profile/${session.nbfc_id}`, {
+//        headers: { 'Authorization': `Bearer ${session.access_token}` }
+//    });
+//    if (!verify.ok) {
+//        ['nbfc_token','nbfc_id','nbfc_name','nbfc_email']
+//            .forEach(k => localStorage.removeItem(k));
+//        window.location.href = '/nbfc/register';
+//        return;
+//    }
+//    const profile = await verify.json();
+//    const logoBox = document.getElementById('topLogoIcon');
+//    if (logoBox && profile.logo_url) {
+//        logoBox.innerHTML = `<img src="${profile.logo_url}" alt="${profile.company_name}"
+//            style="width:100%;height:100%;object-fit:contain;padding:3px;border-radius:6px;"/>`;
+//    }
+//} catch (e) {
+//    window.location.href = '/nbfc/register';
+//    return;
+//}
+
 try {
     const verify = await fetch(`${API}/api/nbfc/dashboard/profile/${session.nbfc_id}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
-    if (!verify.ok) {
+    if (verify.status === 401 || verify.status === 403) {
         ['nbfc_token','nbfc_id','nbfc_name','nbfc_email']
             .forEach(k => localStorage.removeItem(k));
         window.location.href = '/nbfc/register';
+        return;
+    }
+    if (!verify.ok) {
+        document.body.style.visibility = 'visible';
+        document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;font-family:sans-serif;color:#4a4a6a;">
+            <div>Couldn't reach the server. Please check your connection.</div>
+            <button onclick="location.reload()" style="padding:8px 18px;background:#1b5068;color:white;border:none;border-radius:8px;cursor:pointer;">Retry</button>
+        </div>`;
         return;
     }
     const profile = await verify.json();
@@ -136,7 +165,11 @@ try {
             style="width:100%;height:100%;object-fit:contain;padding:3px;border-radius:6px;"/>`;
     }
 } catch (e) {
-    window.location.href = '/nbfc/register';
+    document.body.style.visibility = 'visible';
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;font-family:sans-serif;color:#4a4a6a;">
+        <div>Couldn't reach the server. Please check your connection.</div>
+        <button onclick="location.reload()" style="padding:8px 18px;background:#1b5068;color:white;border:none;border-radius:8px;cursor:pointer;">Retry</button>
+    </div>`;
     return;
 }
 document.body.style.visibility = 'visible';

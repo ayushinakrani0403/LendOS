@@ -40,22 +40,51 @@ async function loadProfile(session) {
         document.getElementById('loadingState').textContent = 'Could not load profile.';
     }
 }
+function togglePwVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('ti-eye');
+        icon.classList.add('ti-eye-off');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('ti-eye-off');
+        icon.classList.add('ti-eye');
+    }
+}
+
+function handleLogout() {
+    ['borrower_token', 'borrower_id'].forEach(k => localStorage.removeItem(k));
+    window.location.href = '/borrower/login';
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
+}
 
 async function changePassword() {
     const session   = getSession();
     const currentPw = document.getElementById('s-current-pw').value;
     const newPw     = document.getElementById('s-new-pw').value;
+    const confirmPw = document.getElementById('s-confirm-pw').value;   // ← new
 
     document.getElementById('pw-alert-ok').style.display  = 'none';
     document.getElementById('pw-alert-err').style.display = 'none';
 
-    if (!currentPw || !newPw) {
-        document.getElementById('pw-alert-err-text').textContent = 'Both fields are required.';
+    if (!currentPw || !newPw || !confirmPw) {                          // ← updated check
+        document.getElementById('pw-alert-err-text').textContent = 'All fields are required.';
         document.getElementById('pw-alert-err').style.display = 'flex';
         return;
     }
     if (newPw.length < 8) {
         document.getElementById('pw-alert-err-text').textContent = 'New password must be at least 8 characters.';
+        document.getElementById('pw-alert-err').style.display = 'flex';
+        return;
+    }
+    if (newPw !== confirmPw) {                                          // ← new check
+        document.getElementById('pw-alert-err-text').textContent = 'New password and confirmation do not match.';
         document.getElementById('pw-alert-err').style.display = 'flex';
         return;
     }
@@ -75,6 +104,7 @@ async function changePassword() {
         document.getElementById('pw-alert-ok').style.display = 'flex';
         document.getElementById('s-current-pw').value = '';
         document.getElementById('s-new-pw').value = '';
+        document.getElementById('s-confirm-pw').value = '';            // ← new, clear on success
     } catch (e) {
         document.getElementById('pw-alert-err-text').textContent = e.message;
         document.getElementById('pw-alert-err').style.display = 'flex';

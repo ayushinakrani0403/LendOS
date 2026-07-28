@@ -878,6 +878,37 @@ async function loadBorrowerProfile(session) {
         safeEmi = (monthlyIncome * foirLimit) - existingEmis;
         safeEmi = Math.max(safeEmi, 0); // never negative
 
+        // ── NEW: DYNAMIC SLIDER MAX LIMIT ──
+        let maxAllowedLoan = nbfc.max_loan_amount;
+
+        if (safeEmi > 0) {
+            const r = (nbfc.interest_rate / 100) / 12;
+            const n = nbfc.max_tenure_months;
+            // Calculate max loan based on max tenure and safe EMI
+            let calcMaxLoan = safeEmi * (Math.pow(1+r, n) - 1) / (r * Math.pow(1+r, n));
+            calcMaxLoan = Math.floor(calcMaxLoan / 1000) * 1000; // Round down to nearest 1000
+
+            // Cap at NBFC's hard limit
+            maxAllowedLoan = Math.min(nbfc.max_loan_amount, calcMaxLoan);
+        } else if (monthlyIncome > 0) {
+            maxAllowedLoan = nbfc.min_loan_amount; // Block high loans if FOIR is already maxed
+        }
+
+        // Apply new limit to slider and UI
+        const loanSlider = document.getElementById('loanSlider');
+        const loanAmountInput = document.getElementById('loanAmountInput');
+
+        loanSlider.max = maxAllowedLoan;
+        document.getElementById('sliderMax').textContent = '₹' + fmtNum(maxAllowedLoan);
+
+        // If the pre-filled value is higher than the new max, dial it down automatically
+        if (parseInt(loanSlider.value) > maxAllowedLoan) {
+            loanSlider.value = Math.max(nbfc.min_loan_amount, maxAllowedLoan);
+            loanAmountInput.value = loanSlider.value;
+            recalculate(); // Force update with new capped amount
+        }
+        // ───────────────────────────────────
+
         // Update affordability card rows
         document.getElementById('arIncome').textContent =
             monthlyIncome ? '₹' + fmtINR(Math.round(monthlyIncome)) : '₹—';
@@ -890,7 +921,7 @@ async function loadBorrowerProfile(session) {
         console.error('Could not load profile', e);
     }
 }
-
+// ── Attach events ─────────────────────────────────────────────
 // ── Attach events ─────────────────────────────────────────────
 function attachEvents() {
     const loanSlider      = document.getElementById('loanSlider');
@@ -904,24 +935,28 @@ function attachEvents() {
         recalculate();
     });
 
-    // Amount input → slider
-// Amount input → slider (free typing; clamp on blur)
-loanAmountInput.addEventListener('input', () => {
-    const raw = parseInt(loanAmountInput.value) || 0;
-    if (raw >= nbfc.min_loan_amount && raw <= nbfc.max_loan_amount) {
-        loanSlider.value = raw;
-        recalculate();
-    }
-});
+    // Amount input → slider (free typing; clamp on blur)
+    loanAmountInput.addEventListener('input', () => {
+        const raw = parseInt(loanAmountInput.value) || 0;
+        const dynamicMax = parseInt(loanSlider.max) || nbfc.max_loan_amount; // Use dynamic max
 
-loanAmountInput.addEventListener('blur', () => {
-    let val = parseInt(loanAmountInput.value);
-    if (isNaN(val) || val === 0) val = nbfc.min_loan_amount;
-    val = Math.max(nbfc.min_loan_amount, Math.min(nbfc.max_loan_amount, val));
-    loanAmountInput.value = val;
-    loanSlider.value = val;
-    recalculate();
-});
+        if (raw >= nbfc.min_loan_amount && raw <= dynamicMax) {
+            loanSlider.value = raw;
+            recalculate();
+        }
+    });
+
+    loanAmountInput.addEventListener('blur', () => {
+        let val = parseInt(loanAmountInput.value);
+        const dynamicMax = parseInt(loanSlider.max) || nbfc.max_loan_amount; // Use dynamic max
+
+        if (isNaN(val) || val === 0) val = nbfc.min_loan_amount;
+        val = Math.max(nbfc.min_loan_amount, Math.min(dynamicMax, val)); // Clamp strictly to safe limit
+
+        loanAmountInput.value = val;
+        loanSlider.value = val;
+        recalculate();
+    });
 
     // Tenure input (typed)
     const tenureInput = document.getElementById('tenureInput');
@@ -939,22 +974,53 @@ loanAmountInput.addEventListener('blur', () => {
     });
 
     // Purpose → re-check proceed button
-//    purposeSelect.addEventListener('change', updateProceedBtn);
-purposeSelect.addEventListener('change', () => updateProceedBtn());
+    purposeSelect.addEventListener('change', () => updateProceedBtn());
 }
-
+// ── Core: recalculate everything ─────────────────────────────
 // ── Core: recalculate everything ─────────────────────────────
 function recalculate() {
-    const loanAmount = parseInt(document.getElementById('loanSlider').value) || 0;
-    const tenure     = parseInt(document.getElementById('tenureSlider').value) || 12;
-    const rate       = nbfc.interest_rate;
-    const fee        = nbfc.processing_fee;
+    let loanAmount = parseInt(document.getElementById('loanSlider').value) || 0;
+    const tenure   = parseInt(document.getElementById('tenureSlider').value) || 12;
+    const rate     = nbfc.interest_rate || 12;
+    const fee      = nbfc.processing_fee || 2;
+    const r        = (rate / 100) / 12;
+
+    // ── 1. DYNAMICALLY CALCULATE MAX LIMIT BASED ON TENURE ──
+    let maxAllowedLoan = nbfc.max_loan_amount;
+
+    if (monthlyIncome > 0 && safeEmi > 0) {
+        // Calculate max loan mathematically based on the CURRENT tenure slider
+        let calcMaxLoan = r > 0
+            ? safeEmi * (Math.pow(1+r, tenure) - 1) / (r * Math.pow(1+r, tenure))
+            : safeEmi * tenure;
+
+        calcMaxLoan = Math.floor(calcMaxLoan / 100) * 100; // Round down to nearest 100
+        maxAllowedLoan = Math.min(nbfc.max_loan_amount, calcMaxLoan);
+    } else if (monthlyIncome > 0 && safeEmi <= 0) {
+        maxAllowedLoan = nbfc.min_loan_amount; // Block high loans if FOIR is maxed
+    }
+
+    const finalMax = Math.max(nbfc.min_loan_amount, maxAllowedLoan);
+
+    // ── 2. ENFORCE LIMITS ON UI ELEMENTS ──
+    const loanSlider = document.getElementById('loanSlider');
+    const loanAmountInput = document.getElementById('loanAmountInput');
+
+    loanSlider.max = finalMax;
+    document.getElementById('sliderMax').textContent = '₹' + fmtNum(finalMax);
+
+    // Snap the slider value down if it currently exceeds the safe limit
+    if (loanAmount > finalMax) {
+        loanAmount = finalMax;
+        loanSlider.value = finalMax;
+        loanAmountInput.value = finalMax;
+    }
+    // ──────────────────────────────────────────────────────────
 
     // Sync tenure input with slider
     document.getElementById('tenureInput').value = tenure;
 
     // EMI formula
-    const r   = (rate / 100) / 12;
     const emi = loanAmount > 0
         ? Math.round(loanAmount * r * Math.pow(1+r, tenure) / (Math.pow(1+r, tenure) - 1))
         : 0;
@@ -979,7 +1045,6 @@ function recalculate() {
     // Update slider track fill color
     updateSliderFill();
 }
-
 // ── Affordability check ───────────────────────────────────────
 function checkAffordability(emi, loanAmount, tenure, rate) {
     const affordMsg      = document.getElementById('affordMsg');

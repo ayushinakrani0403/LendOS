@@ -1,14 +1,24 @@
-(function () {
-    const API = window.API_BASE || window.location.origin;
+    (function () {
+        const API = window.API_BASE || window.location.origin;
 
-    function getToken() {
-        return localStorage.getItem('borrower_token');
-    }
+        function getToken() {
+            return localStorage.getItem('borrower_token');
+        }
+
+
     function getBorrowerId() {
-        return localStorage.getItem('borrower_id') || 'anonymous';
+        const token = getToken();
+        if (!token) return 'anonymous';
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.borrower_id || payload.id || 'anonymous';
+        } catch (e) {
+            return 'anonymous';
+        }
     }
+
     function storageKey() {
-        return `lendos_chat_history_${getBorrowerId()}`;
+        return `lendos_chat_history_v2_${getBorrowerId()}`;
     }
 
     function saveHistory() {
