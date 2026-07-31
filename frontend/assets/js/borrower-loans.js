@@ -58,7 +58,16 @@ function statusBadge(status) {
     return `<span class="loan-badge ${cls}"><i class="ti ${icon}"></i>${label}</span>`;
 }
 
-function emiStatusBadge(status) {
+function emiStatusBadge(emi) {
+    const status = emi.status;
+    if (status === 'pending' && emi.dispute_reason) {
+        return `
+            <span class="emi-status-badge disputed"><i class="ti ti-alert-triangle"></i>Payment Not Verified</span>
+            <div class="emi-dispute-note">
+                <i class="ti ti-info-circle"></i>
+                <span><strong>NBFC note:</strong> ${emi.dispute_reason}</span>
+            </div>`;
+    }
     const map = {
         paid:    ['paid',    'ti-check',    'Paid'],
         pending: ['pending', 'ti-clock',    'Pending'],
@@ -181,8 +190,20 @@ function closePayModal() {
 }
 
 async function submitEmiClaim() {
-    const ref = document.getElementById('payRefInput').value.trim();
-    if (!ref) { alert('Please enter the payment reference (UTR / UPI Ref).'); return; }
+    const ref = document.getElementById('payRefInput').value.trim().toUpperCase();
+
+    if (!ref) {
+        alert('Please enter the payment reference (UTR / UPI Ref).');
+        return;
+    }
+    if (!/^[A-Z0-9]+$/.test(ref)) {
+        alert('Payment reference should only contain letters and numbers — no spaces or symbols.');
+        return;
+    }
+    if (ref.length < 10 || ref.length > 22) {
+        alert('Please enter a valid UTR / UPI reference number (10–22 characters). Check your bank transfer confirmation and try again.');
+        return;
+    }
     if (!currentEmiContext) return;
 
     const btn = document.getElementById('submitClaimBtn');
@@ -511,7 +532,7 @@ async function toggleEMI(loanId) {
                                 <td style="font-family:var(--font-mono);">${fmtINR(e.principal_component)}</td>
                                 <td style="font-family:var(--font-mono);">${fmtINR(e.interest_component)}</td>
                                 <td style="font-family:var(--font-mono);">${fmtINR(e.outstanding_balance)}</td>
-                                <td>${emiStatusBadge(e.status)}</td>
+                                <td>${emiStatusBadge(e)}</td>
                                 <td>${buildEmiAction(e, loanId)}</td>
                             </tr>`).join('')}
                     </tbody>

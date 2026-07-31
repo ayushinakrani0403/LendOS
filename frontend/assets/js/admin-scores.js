@@ -180,8 +180,10 @@ function renderModal(s) {
     const cls = GRADE_CLASS[gradeLabel] || '';
 
     document.getElementById('modalAvatar').textContent = (s.borrower_name || 'B').charAt(0).toUpperCase();
-document.getElementById('modalTitle').textContent = (s.borrower_name || '—').toUpperCase();
-    document.getElementById('modalSub').textContent = `${s.nbfc_name || '—'} · Score record #${s.id}`;
+    document.getElementById('modalTitle').textContent = (s.borrower_name || '—').toUpperCase();
+    document.getElementById('modalSub').textContent = s.nbfc_name
+        ? `${s.nbfc_name} · Score record #${s.id}`
+        : `Score record #${s.id}`;
 
     document.getElementById('modalBody').innerHTML = `
         <div class="score-hero">

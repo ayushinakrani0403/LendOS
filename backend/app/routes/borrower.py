@@ -668,7 +668,8 @@ async def get_emi_schedule(
     rows = await database.fetch_all(
         """SELECT id , instalment_number, due_date, amount,
                   principal_component, interest_component,
-                  outstanding_balance, status, paid_at, paid_amount
+                  outstanding_balance, status, paid_at, paid_amount,
+                  dispute_reason, disputed_at
            FROM emi_schedule
            WHERE loan_application_id = :loan_id
            ORDER BY instalment_number ASC""",
@@ -727,7 +728,6 @@ async def claim_emi_payment(
 
     return {"message": "Payment claim submitted. Waiting for lender confirmation."}
 
-
 @router.post("/emi/{emi_id}/claim")
 async def claim_emi_payment(
     emi_id: int,
@@ -752,6 +752,28 @@ async def claim_emi_payment(
     if emi["status"] not in ("pending", "overdue"):
         raise HTTPException(400, f"Cannot claim payment for EMI in status '{emi['status']}'.")
 
+    ref_clean = payload.payment_reference.strip().upper()
+
+    if not ref_clean:
+        raise HTTPException(400, "Payment reference is required.")
+    if not ref_clean.isalnum():
+        raise HTTPException(400, "Payment reference should only contain letters and numbers.")
+    if len(ref_clean) < 10 or len(ref_clean) > 22:
+        raise HTTPException(400, "Please enter a valid UTR / UPI reference number (10–22 characters).")
+
+    # ── Reject duplicate payment references ───────────────────────
+    duplicate = await database.fetch_one(
+        """SELECT id FROM emi_schedule
+           WHERE payment_reference = :ref AND id != :emi_id""",
+        {"ref": ref_clean, "emi_id": emi_id}
+    )
+    if duplicate:
+        raise HTTPException(
+            400,
+            "This payment reference number is already in use. "
+            "Please check your transaction and enter the correct reference number."
+        )
+
     await database.execute(
         """UPDATE emi_schedule
            SET status = 'payment_claimed',
@@ -759,7 +781,7 @@ async def claim_emi_payment(
                claimed_amount = :amount,
                claimed_at = NOW()
            WHERE id = :id""",
-        {"ref": payload.payment_reference, "amount": payload.claimed_amount, "id": emi_id}
+        {"ref": ref_clean, "amount": payload.claimed_amount, "id": emi_id}
     )
 
     return {"message": "Payment claim submitted. Awaiting NBFC confirmation."}

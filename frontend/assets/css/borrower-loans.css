@@ -32,7 +32,25 @@
   font-size: 13.5px; color: var(--text-secondary);
   margin-bottom: 24px; line-height: 1.7; max-width: 360px; margin-inline: auto;
 }
-
+.emi-status-badge.disputed {
+  background: #fff1f2; color: #be123c;
+}
+.emi-dispute-note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  max-width: 220px;
+  line-height: 1.5;
+}
+.emi-dispute-note i {
+  color: #be123c;
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 /* ── Stats strip ── */
 .loan-stats-strip {
   display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
